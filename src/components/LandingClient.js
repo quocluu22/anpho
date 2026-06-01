@@ -209,7 +209,6 @@ export default function LandingClient({
       },
     ];
     // Group services by Category - giữ đúng thứ tự category
-    const ORDER = ["Small Bites & Rolls", "Signature Phở", "Beyond the Broth", "Drinks", "Desserts"];
     const ICONS = { "Small Bites & Rolls":"🥢", "Signature Phở":"🍜", "Beyond the Broth":"🔥", "Drinks":"🥤", "Desserts":"🍮" };
     const groups = {};
     services.forEach(svc => {
@@ -223,7 +222,19 @@ export default function LandingClient({
       };
       groups[cat].items.push(svc);
     });
-    // Sort by predefined order
+
+    // Đọc thứ tự từ Settings Sheet (menu_category_order)
+    let ORDER = ["Small Bites & Rolls", "Signature Phở", "Beyond the Broth", "Drinks", "Desserts"];
+    if (settings.menu_category_order) {
+      try {
+        const saved = JSON.parse(settings.menu_category_order);
+        if (Array.isArray(saved) && saved.length > 0) {
+          ORDER = saved.map(c => c.name || c);
+        }
+      } catch (_) {}
+    }
+
+    // Sort theo thứ tự từ admin
     const sorted = ORDER.map(o => groups[o]).filter(Boolean);
     const others = Object.values(groups).filter(g => !ORDER.includes(g.cat));
     return [...sorted, ...others];
