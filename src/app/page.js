@@ -1,6 +1,6 @@
 import LandingClient from "../components/LandingClient";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 const SCRIPT_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
 
