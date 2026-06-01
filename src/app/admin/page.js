@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Table, Button, Modal, Form, Input, Select, Switch, Space, Card, message, Typography, Tag, Popconfirm, Image } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, LinkOutlined } from "@ant-design/icons";
-import { adminApi } from "../../../lib/api";
+import { adminApi } from "../../lib/api";
 
 const { Title } = Typography;
 const CLOUD  = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
