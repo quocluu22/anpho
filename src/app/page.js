@@ -5,6 +5,7 @@ export const revalidate = 60;
 const SCRIPT_URL = process.env.NEXT_PUBLIC_APPS_SCRIPT_URL;
 
 async function fetchSheet(action) {
+  if (!SCRIPT_URL) return [];
   try {
     const res = await fetch(`${SCRIPT_URL}?action=${action}`, { cache: "no-store" });
     return res.json();
@@ -15,6 +16,7 @@ async function fetchSheet(action) {
 }
 
 async function fetchObject(action) {
+  if (!SCRIPT_URL) return {};
   try {
     const res = await fetch(`${SCRIPT_URL}?action=${action}`, { cache: "no-store" });
     return res.json();
