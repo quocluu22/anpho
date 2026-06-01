@@ -1,308 +1,215 @@
 "use client";
-import { useEffect, useState, useCallback, useRef } from "react";
-import {
-  Table, Tag, Select, Button, DatePicker, Space, Statistic,
-  Row, Col, Card, message, Typography, Calendar, Drawer,
-  Descriptions, Form, Input, Divider, Badge,
-} from "antd";
-import {
-  ReloadOutlined, CalendarOutlined, UnorderedListOutlined,
-  BellOutlined, EyeOutlined, EditOutlined,
-} from "@ant-design/icons";
-import { adminApi } from "../../lib/api";
-import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { Table, Button, Modal, Form, Input, Select, Switch, Space, Card, message, Typography, Tag, Popconfirm, Image } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined, LinkOutlined } from "@ant-design/icons";
+import { adminApi } from "../../../lib/api";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
+const CLOUD  = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+const PRESET = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "nail_gallery";
 
-const STATUS = {
-  Pending:   { color: "orange",  label: "Pending" },
-  Confirmed: { color: "blue",    label: "Confirmed" },
-  Done:      { color: "green",   label: "Done" },
-  Cancelled: { color: "red",     label: "Cancelled" },
-};
+const CATEGORIES = ["Small Bites & Rolls", "Signature Phở", "Beyond the Broth", "Drinks", "Desserts"];
 
-const TIMES = [
-  "11:00 AM","11:30 AM","12:00 PM","12:30 PM","1:00 PM","1:30 PM","2:00 PM",
-  "5:00 PM","5:30 PM","6:00 PM","6:30 PM","7:00 PM","7:30 PM","8:00 PM",
-];
+// ── Reusable image upload component ──────────────────────────
+function ImgUpload({ value, onChange }) {
+  const [uploading, setUploading] = useState(false);
 
-const fmtDate = v => v ? dayjs(v).isValid() ? dayjs(v).format("MMM D, YYYY") : String(v) : "—";
-const fmtTime = v => v ? String(v) : "—";
-
-export default function ReservationsPage() {
-  const [rows,    setRows]    = useState([]);
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [view,    setView]    = useState("list");
-  const [fDate,   setFDate]   = useState(null);
-  const [fStatus, setFStatus] = useState("all");
-  const [newCnt,  setNewCnt]  = useState(0);
-  const [drawer,  setDrawer]  = useState(false);
-  const [sel,     setSel]     = useState(null);
-  const [editing, setEditing] = useState(false);
-  const [saving,  setSaving]  = useState(false);
-  const [form]                = Form.useForm();
-  const sinceRef = useRef(new Date().toISOString());
-
-  const load = useCallback(async () => {
-    setLoading(true);
+  const doUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!CLOUD) { message.error("Thiếu NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME"); return; }
+    setUploading(true);
     try {
-      const [r, s] = await Promise.all([adminApi.getReservations(), adminApi.getStats()]);
-      setRows(Array.isArray(r) ? r : []);
-      setStats(s);
-    } catch { message.error("Failed to load"); }
-    finally { setLoading(false); }
-  }, []);
-
-  const poll = useCallback(async () => {
-    try {
-      const d = await adminApi.pollReservations(sinceRef.current);
-      if (d.hasNew && d.bookings?.length > 0) {
-        const existed = new Set(rows.map(r => r._row));
-        const fresh = d.bookings.filter(r => !existed.has(r._row));
-        if (fresh.length > 0) {
-          setRows(prev => [...fresh, ...prev]);
-          setNewCnt(c => c + fresh.length);
-          message.info(`🍜 ${fresh.length} new reservation!`);
-          sinceRef.current = new Date().toISOString();
-        }
-      }
-    } catch (_) {}
-  }, [rows]);
-
-  useEffect(() => {
-    load();
-    const t = setInterval(poll, 30000);
-    return () => clearInterval(t);
-  }, [load]);
-
-  const update = async (record, updates) => {
-    setRows(prev => prev.map(r => r._row === record._row ? { ...r, ...updates } : r));
-    if (sel?._row === record._row) setSel(s => ({ ...s, ...updates }));
-    try {
-      await adminApi.updateReservation({ _row: record._row, clientName: record.Name, service: record.Party || "", date: record.Date, time: record.Time, ...updates });
-    } catch { message.error("Failed"); load(); }
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("upload_preset", PRESET);
+      const res  = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD}/image/upload`, { method:"POST", body:fd });
+      const data = await res.json();
+      if (data.secure_url) { onChange(data.secure_url); message.success("✅ Upload thành công!"); }
+      else message.error("❌ " + (data.error?.message || "Upload thất bại"));
+    } catch { message.error("❌ Upload thất bại"); }
+    finally { setUploading(false); e.target.value = ""; }
   };
 
-  const saveEdit = async () => {
+  return (
+    <div>
+      {/* URL input */}
+      <Input
+        value={value} onChange={e => onChange(e.target.value)}
+        prefix={<LinkOutlined/>}
+        placeholder="https://res.cloudinary.com/..."
+        style={{ marginBottom:8 }}
+      />
+      {/* Preview */}
+      {value && (
+        <div style={{ marginBottom:8 }}>
+          <Image src={value} height={80} style={{ objectFit:"cover", borderRadius:6, border:"1px solid #eee" }} preview/>
+        </div>
+      )}
+      {/* Upload button */}
+      <label style={{
+        display:"inline-flex", alignItems:"center", gap:6,
+        padding:"5px 12px", borderRadius:6,
+        border:"1px dashed #d9d9d9", cursor: uploading ? "not-allowed" : "pointer",
+        fontSize:13, color:"#555", background:"#fafafa",
+      }}>
+        <UploadOutlined/>
+        {uploading ? "Đang upload..." : "Upload ảnh"}
+        <input type="file" accept="image/*" disabled={uploading} onChange={doUpload} style={{ display:"none" }}/>
+      </label>
+    </div>
+  );
+}
+
+export default function MenuPage() {
+  const [items,   setItems]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal,   setModal]   = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [form]                = Form.useForm();
+
+  const load = async () => {
+    setLoading(true);
+    try { setItems(await adminApi.getMenu() || []); }
+    catch { message.error("Failed to load menu"); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openAdd = () => {
+    setEditing(null);
+    form.resetFields();
+    form.setFieldsValue({ Active:true, Featured:false, Category:CATEGORIES[0] });
+    setModal(true);
+  };
+
+  const openEdit = item => {
+    setEditing(item);
+    form.setFieldsValue({
+      Category: item.Category, Name: item.Name, Price: item.Price,
+      Desc: item.Desc, Tags: Array.isArray(item.Tags) ? item.Tags.join(",") : (item.Tags || ""),
+      Img: item.Img, Featured: item.Featured, Active: item.Active !== false,
+    });
+    setModal(true);
+  };
+
+  const handleSave = async () => {
     let v; try { v = await form.validateFields(); } catch { return; }
     setSaving(true);
     try {
-      await update(sel, {
-        date:   v.date   ? dayjs(v.date).format("YYYY-MM-DD") : sel.Date,
-        time:   v.time   || sel.Time,
-        status: v.status || sel.Status,
-        location: v.location || sel.Location || "",
-      });
-      message.success("Updated!");
-      setEditing(false);
-    } finally { setSaving(false); }
+      if (editing) {
+        await adminApi.updateMenuItem({ _row:editing._row, ...v, Tags:v.Tags||"" });
+        message.success("✅ Updated!");
+      } else {
+        await adminApi.addMenuItem({ ...v, Tags:v.Tags||"" });
+        message.success("✅ Added!");
+      }
+      setModal(false); load();
+    } catch { message.error("❌ Failed"); }
+    finally { setSaving(false); }
   };
 
-  const openDetail = r => { setSel(r); setEditing(false); setDrawer(true); };
-  const openEdit   = r => {
-    setSel(r);
-    form.setFieldsValue({ date: r.Date ? dayjs(r.Date) : null, time: r.Time || "", status: r.Status || "Pending", location: r.Location || "" });
-    setEditing(true); setDrawer(true);
+  const handleDelete = item => {
+    Modal.confirm({
+      title: `Delete "${item.Name}"?`, okText:"Delete", okType:"danger",
+      onOk: async () => { await adminApi.deleteMenuItem({ _row:item._row }); message.success("Deleted!"); load(); },
+    });
   };
 
-  const filtered = rows.filter(r => {
-    const dOk = !fDate   || String(r.Date) === fDate.format("YYYY-MM-DD");
-    const sOk = fStatus === "all" || r.Status === fStatus;
-    return dOk && sOk;
-  });
+  // Group by category
+  const grouped = CATEGORIES.map(cat => ({
+    cat, items: items.filter(i => i.Category === cat)
+  })).filter(g => g.items.length > 0);
 
   const columns = [
     {
-      title: "Date & Time", width: 160,
-      render: (_, r) => <div><div style={{ fontWeight:600 }}>{fmtDate(r.Date)}</div><div style={{ color:"#888", fontSize:12 }}>{fmtTime(r.Time)}</div></div>,
-      sorter: (a, b) => String(a.Date).localeCompare(String(b.Date)),
+      title:"", dataIndex:"Img", width:60,
+      render: v => v ? <Image src={v} width={40} height={40} style={{ objectFit:"cover", borderRadius:4 }} preview={false}/> : <div style={{ width:40, height:40, background:"#f5f5f5", borderRadius:4, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>🍜</div>
     },
     {
-      title: "Guest", width: 180,
-      render: (_, r) => <div><div style={{ fontWeight:600 }}>{r.Name}</div><div style={{ color:"#888", fontSize:12 }}>{r.Phone}</div></div>,
+      title:"Name", dataIndex:"Name",
+      render:(v,r) => <Space><span style={{ fontWeight:600 }}>{v}</span>{r.Featured && <Tag color="gold">Featured</Tag>}</Space>
     },
-    { title: "Party",    dataIndex: "Party",    width: 130 },
-    { title: "Location", dataIndex: "Location", width: 160 },
+    { title:"Price", dataIndex:"Price", width:100 },
+    { title:"Description", dataIndex:"Desc", ellipsis:true },
+    { title:"Tags", dataIndex:"Tags", width:180, render: tags => Array.isArray(tags) ? tags.map(t=><Tag key={t}>{t}</Tag>) : null },
+    { title:"Active", dataIndex:"Active", width:80, render: v => <Tag color={v?"green":"default"}>{v?"On":"Off"}</Tag> },
     {
-      title: "Status", width: 160,
-      render: (_, r) => (
-        <Select size="small" style={{ width:140 }} value={r.Status || "Pending"}
-          options={Object.keys(STATUS).map(s => ({ value:s, label:<Tag color={STATUS[s].color}>{s}</Tag> }))}
-          onChange={v => update(r, { status:v })}
-          onClick={e => e.stopPropagation()}
-        />
-      ),
-    },
-    {
-      title: "", width: 80, fixed: "right",
-      render: (_, r) => (
+      title:"", width:90,
+      render:(_,r) => (
         <Space>
-          <Button size="small" icon={<EyeOutlined/>}  onClick={() => openDetail(r)}/>
-          <Button size="small" icon={<EditOutlined/>}  onClick={() => openEdit(r)}/>
+          <Button size="small" icon={<EditOutlined/>}  onClick={()=>openEdit(r)}/>
+          <Popconfirm title={`Delete "${r.Name}"?`} onConfirm={()=>handleDelete(r)}>
+            <Button size="small" icon={<DeleteOutlined/>} danger/>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  const cellRender = date => {
-    const ds = date.format("YYYY-MM-DD");
-    const items = rows.filter(r => String(r.Date) === ds || dayjs(String(r.Date)).format("YYYY-MM-DD") === ds);
-    if (!items.length) return null;
-    return (
-      <ul style={{ listStyle:"none", padding:0, margin:0 }}>
-        {items.slice(0,3).map((r,i) => (
-          <li key={i} style={{ cursor:"pointer" }} onClick={() => openDetail(r)}>
-            <Tag color={STATUS[r.Status]?.color||"default"} style={{ fontSize:10, padding:"0 4px", maxWidth:"100%", overflow:"hidden", textOverflow:"ellipsis" }}>
-              {fmtTime(r.Time)} {r.Name}
-            </Tag>
-          </li>
-        ))}
-        {items.length > 3 && <li><Text type="secondary" style={{ fontSize:10 }}>+{items.length-3}</Text></li>}
-      </ul>
-    );
-  };
-
   return (
     <div>
-      {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-        <Space>
-          <Title level={4} style={{ margin:0 }}>Reservations</Title>
-          {newCnt > 0 && (
-            <Badge count={newCnt} onClick={() => setNewCnt(0)} style={{ cursor:"pointer" }}>
-              <BellOutlined style={{ fontSize:20, color:"#815500" }}/>
-            </Badge>
-          )}
-          <Text type="secondary" style={{ fontSize:12 }}>Auto-refresh 30s</Text>
-        </Space>
-        <Space>
-          <Button icon={view==="list" ? <CalendarOutlined/> : <UnorderedListOutlined/>}
-            onClick={() => setView(v => v==="list" ? "calendar" : "list")}>
-            {view==="list" ? "Calendar" : "List"}
-          </Button>
-          <Button icon={<ReloadOutlined/>} onClick={load}>Refresh</Button>
-        </Space>
+        <Title level={4} style={{ margin:0 }}>Menu Items</Title>
+        <Button type="primary" icon={<PlusOutlined/>} onClick={openAdd}
+          style={{ background:"#815500", borderColor:"#815500" }}>
+          Add Item
+        </Button>
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <Row gutter={[12,12]} style={{ marginBottom:20 }}>
-          {[
-            ["Today",      stats.today,     ""],
-            ["This Week",  stats.thisWeek,  ""],
-            ["This Month", stats.thisMonth, ""],
-            ["Total",      stats.total,     ""],
-            ["Pending",    stats.pending,   "#d46b08"],
-            ["Confirmed",  stats.confirmed, "#1677ff"],
-            ["Done",       stats.done||0,   "#389e0d"],
-            ["Revenue",    stats.revenueMonth, "#815500"],
-          ].map(([title, value, color]) => (
-            <Col key={title} xs={12} sm={6} md={3}>
-              <Card size="small">
-                <Statistic title={title} value={value}
-                  prefix={title==="Revenue" ? "$" : undefined}
-                  valueStyle={color ? { color, fontSize:20 } : { fontSize:20 }}
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
-
-      {/* Table / Calendar */}
-      {view === "list" ? (
-        <Card>
-          <Space style={{ marginBottom:16 }} wrap>
-            <DatePicker placeholder="Filter by date" onChange={setFDate} allowClear/>
-            <Select value={fStatus} onChange={setFStatus} style={{ width:150 }}
-              options={[{ value:"all", label:"All status" }, ...Object.keys(STATUS).map(s => ({ value:s, label:<Tag color={STATUS[s].color}>{s}</Tag> }))]}
-            />
-          </Space>
-          <Table
-            rowKey="_row" columns={columns} dataSource={filtered} loading={loading}
-            size="small" scroll={{ x:900 }}
-            pagination={{ pageSize:20, showTotal: t => `${t} reservations` }}
-            rowClassName={r => r.Status === "Pending" ? "pending-row" : ""}
-            onRow={r => ({ onClick: () => openDetail(r) })}
-          />
+      {grouped.length > 0 ? grouped.map(({ cat, items:catItems }) => (
+        <Card key={cat} title={<span style={{ color:"#815500", fontWeight:700 }}>{cat}</span>}
+          style={{ marginBottom:16 }} size="small">
+          <Table rowKey="_row" dataSource={catItems} columns={columns} loading={loading} size="small" pagination={false}/>
         </Card>
-      ) : (
-        <Card><Calendar cellRender={cellRender}/></Card>
+      )) : (
+        <Card>
+          <div style={{ textAlign:"center", padding:40, color:"#888" }}>
+            <div style={{ fontSize:40, marginBottom:12 }}>🍜</div>
+            <div>No menu items yet.</div>
+            <Button type="primary" icon={<PlusOutlined/>} onClick={openAdd} style={{ marginTop:16, background:"#815500", borderColor:"#815500" }}>Add First Item</Button>
+          </div>
+        </Card>
       )}
 
-      {/* Drawer */}
-      <Drawer
-        title={editing ? "Edit Reservation" : "Reservation Detail"}
-        placement="right" width={420} open={drawer}
-        onClose={() => { setDrawer(false); setEditing(false); }}
+      <Modal
+        title={editing ? "Edit Menu Item" : "Add Menu Item"}
+        open={modal} onCancel={()=>setModal(false)}
+        onOk={handleSave} okText="Save" confirmLoading={saving}
+        okButtonProps={{ style:{ background:"#815500", borderColor:"#815500" } }}
+        width={560}
       >
-        {sel && !editing && (
-          <>
-            <div style={{ textAlign:"center", marginBottom:24 }}>
-              <Tag color={STATUS[sel.Status]?.color||"default"} style={{ fontSize:16, padding:"6px 20px", borderRadius:20 }}>
-                {sel.Status || "Pending"}
-              </Tag>
-            </div>
-            <Descriptions column={1} size="small" bordered>
-              <Descriptions.Item label="👤 Guest">{sel.Name}</Descriptions.Item>
-              <Descriptions.Item label="📞 Phone">{sel.Phone}</Descriptions.Item>
-              <Descriptions.Item label="✉️ Email">{sel.Email || "—"}</Descriptions.Item>
-              <Descriptions.Item label="👥 Party">{sel.Party || "—"}</Descriptions.Item>
-              <Descriptions.Item label="📍 Location">{sel.Location || "—"}</Descriptions.Item>
-              <Descriptions.Item label="📅 Date">{fmtDate(sel.Date)}</Descriptions.Item>
-              <Descriptions.Item label="🕐 Time">{fmtTime(sel.Time)}</Descriptions.Item>
-              <Descriptions.Item label="📝 Notes">{sel.Notes || "—"}</Descriptions.Item>
-            </Descriptions>
-            <Divider>Actions</Divider>
-            <Space direction="vertical" style={{ width:"100%" }}>
-              <Button block icon={<EditOutlined/>} onClick={() => {
-                form.setFieldsValue({ date: sel.Date ? dayjs(sel.Date) : null, time: sel.Time, status: sel.Status, location: sel.Location || "" });
-                setEditing(true);
-              }}>Edit Details</Button>
-              {Object.keys(STATUS).filter(s => s !== sel.Status).map(s => (
-                <Button key={s} block
-                  type={s==="Done" ? "primary" : "default"}
-                  danger={s==="Cancelled"}
-                  style={s==="Confirmed" ? { borderColor:"#1677ff", color:"#1677ff" } : {}}
-                  onClick={() => { update(sel, { status:s }); message.success(`Marked as ${s}`); }}
-                >
-                  Mark as {s}
-                </Button>
-              ))}
-            </Space>
-          </>
-        )}
-        {sel && editing && (
-          <Form form={form} layout="vertical">
-            <Form.Item name="status" label="Status">
-              <Select options={Object.keys(STATUS).map(s => ({ value:s, label:<Tag color={STATUS[s].color}>{s}</Tag> }))}/>
+        <Form form={form} layout="vertical" style={{ marginTop:16 }}>
+          <Form.Item name="Category" label="Category" rules={[{ required:true }]}>
+            <Select options={CATEGORIES.map(c=>({ value:c, label:c }))}/>
+          </Form.Item>
+          <Form.Item name="Name" label="Item Name" rules={[{ required:true }]}>
+            <Input placeholder="Classic Beef Phở"/>
+          </Form.Item>
+          <Form.Item name="Price" label="Price" rules={[{ required:true }]}>
+            <Input placeholder="$18.50"/>
+          </Form.Item>
+          <Form.Item name="Desc" label="Description">
+            <Input.TextArea rows={2} placeholder="Thinly sliced ribeye, brisket..."/>
+          </Form.Item>
+          <Form.Item name="Tags" label="Tags (phân cách bằng dấu phẩy)">
+            <Input placeholder="Popular, Gluten Free, Vegan"/>
+          </Form.Item>
+          <Form.Item name="Img" label="Ảnh món ăn">
+            <ImgUpload/>
+          </Form.Item>
+          <Space>
+            <Form.Item name="Featured" label="Featured" valuePropName="checked">
+              <Switch/>
             </Form.Item>
-            <Form.Item name="date" label="Date">
-              <DatePicker style={{ width:"100%" }}/>
+            <Form.Item name="Active" label="Active" valuePropName="checked">
+              <Switch defaultChecked/>
             </Form.Item>
-            <Form.Item name="time" label="Time">
-              <Select options={TIMES.map(t => ({ value:t, label:t }))}/>
-            </Form.Item>
-            <Form.Item name="location" label="Location">
-              <Input placeholder="Elk Grove (Main)"/>
-            </Form.Item>
-            <Space style={{ width:"100%", justifyContent:"flex-end" }}>
-              <Button onClick={() => setEditing(false)}>Cancel</Button>
-              <Button type="primary" loading={saving} onClick={saveEdit}
-                style={{ background:"#815500", borderColor:"#815500" }}>
-                Save
-              </Button>
-            </Space>
-          </Form>
-        )}
-      </Drawer>
-
-      <style>{`
-        .pending-row { background: #fffbe6 !important; }
-        .ant-table-row { cursor: pointer; }
-        .ant-table-row:hover td { background: #fdf9f0 !important; }
-      `}</style>
+          </Space>
+        </Form>
+      </Modal>
     </div>
   );
 }
