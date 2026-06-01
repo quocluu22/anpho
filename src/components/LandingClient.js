@@ -128,6 +128,7 @@ export default function LandingClient({
   testimonials = [], about = {}, staffList = []
 }) {
   const [form, setForm]           = useState({ name:"",phone:"",email:"",date:"",time:"",guests:"",location:"",notes:"" });
+  const [activePhoIdx, setActivePhoIdx] = useState(0); // active item trong Signature Phở
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading]     = useState(false);
   const [menuOpen, setMenuOpen]   = useState(false);
@@ -577,36 +578,70 @@ export default function LandingClient({
         {/* MENU — render tất cả groups dynamic từ Sheet */}
         <main className="pho-main" id="menu">
           {menuGroups.map((group, gi) => {
-            // Group 1 (Small Bites): stamp card layout
-            if (gi === 0) return (
-              <div key={group.cat}>
+            // Signature Phở → bento layout với active item
+            if (group.cat === (settings.pho_title || "Signature Phở")) return (
+              <div key={group.cat} style={{marginBottom:80}}>
                 <div className="pho-sec-head">
-                  <div className="pho-sec-icon-wrap">
-                    <span style={{fontSize:32}}>{group.icon}</span>
-                    <h2 className="pho-sec-h2">{group.cat}</h2>
-                  </div>
-                  <div className="hand-div" style={{width:192,margin:"12px auto 0"}}/>
+                  <div style={{textAlign:"center",fontSize:64,marginBottom:8,opacity:0.15}}>🍜</div>
+                  <h2 className="pho-sec-h2 pho-sec-h2-dark" style={{textAlign:"center",fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:"clamp(28px,4vw,56px)"}}>{group.cat}</h2>
+                  {group.sub && <p className="pho-sec-sub">{group.sub}</p>}
+                  <div className="hand-div" style={{width:256,margin:"16px auto 0"}}/>
                 </div>
-                <div className="pho-bites-grid" style={{marginBottom:80}}>
-                  {group.items.map((item, i) => (
-                    <div key={i} className="pho-bite-card">
-                      <div className="stamp">
-                        {item.Img && <img className="pho-bite-img" src={item.Img} alt={item.Name}/>}
-                        <div className="pho-bite-header">
-                          <span className="pho-bite-name">{item.Name}</span>
-                          <span className="pho-bite-price">{item.Price}</span>
+                <div className="pho-bento">
+                  {/* Left: herb circle */}
+                  <div className="pho-bento-left">
+                    <div className="pho-herb-circle"><img src={a.circle_img_1} alt="Fresh herbs"/></div>
+                    <div>
+                      <div style={{textAlign:"center",fontSize:36}}>🍲</div>
+                      <div className="pho-trad-label">Traditional<br/>Methods</div>
+                    </div>
+                  </div>
+                  {/* Center: clickable menu items */}
+                  <div className="pho-menu-items">
+                    {group.items.map((item, i) => (
+                      <div key={i}
+                        className="pho-menu-item"
+                        style={{cursor:"pointer", borderLeftColor: i===activePhoIdx ? "var(--secondary)" : "transparent"}}
+                        onClick={()=>setActivePhoIdx(i)}
+                      >
+                        <div className="pho-menu-item-header">
+                          <span className="pho-menu-item-name" style={{color: i===activePhoIdx ? "var(--secondary)" : "var(--primary)"}}>{item.Name}</span>
+                          <span className="pho-menu-item-price">{item.Price}</span>
                         </div>
-                        <p className="pho-bite-desc">{item.Desc}</p>
+                        <p className="pho-menu-item-desc">{item.Desc}</p>
+                        {item.Tags?.length > 0 && (
+                          <div className="pho-menu-tags">
+                            {item.Tags.map(tag => <span key={tag} className="pho-tag">• {tag}</span>)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {/* Right: active item image + quote */}
+                  <div className="pho-bento-right">
+                    <div className="stamp" style={{transform:"rotate(3deg)",position:"relative"}}>
+                      <img
+                        src={group.items[activePhoIdx]?.Img || s.pho_img_url}
+                        alt={group.items[activePhoIdx]?.Name || "Signature Pho"}
+                        style={{transition:"opacity 0.3s"}}
+                      />
+                      <div className="pho-bestseller">
+                        {activePhoIdx === 0 ? <>Best<br/>Seller</> : <>#{activePhoIdx+1}</>}
                       </div>
                     </div>
-                  ))}
+                    <div className="pho-quote-card">
+                      <div className="pho-quote-title">Our Secret Sauce</div>
+                      <p className="pho-quote-text">"{a.chef_quote}"</p>
+                      <div className="pho-quote-author">— {a.chef_name}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             );
 
-            // Group "Beyond the Broth" hoặc group dark: dark section layout
+            // Beyond the Broth → dark section
             if (group.dark) return (
-              <div key={group.cat} style={{margin:"0 -32px"}}>
+              <div key={group.cat} style={{margin:"0 -32px",marginBottom:0}}>
                 <section className="pho-beyond" style={{padding:"80px 32px"}}>
                   <div className="pho-beyond-inner">
                     <div>
@@ -634,57 +669,9 @@ export default function LandingClient({
               </div>
             );
 
-            // Group 2 (Signature Phở): bento layout
-            if (gi === 1) return (
-              <div key={group.cat}>
-                <div className="pho-sec-head">
-                  <div style={{textAlign:"center",fontSize:64,marginBottom:8,opacity:0.15}}>🍜</div>
-                  <h2 className="pho-sec-h2 pho-sec-h2-dark" style={{textAlign:"center",fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:"clamp(28px,4vw,56px)"}}>{group.cat}</h2>
-                  {group.sub && <p className="pho-sec-sub">{group.sub}</p>}
-                  <div className="hand-div" style={{width:256,margin:"16px auto 0"}}/>
-                </div>
-                <div className="pho-bento">
-                  <div className="pho-bento-left">
-                    <div className="pho-herb-circle"><img src={a.circle_img_1} alt="Fresh herbs"/></div>
-                    <div>
-                      <div style={{textAlign:"center",fontSize:36}}>🍲</div>
-                      <div className="pho-trad-label">Traditional<br/>Methods</div>
-                    </div>
-                  </div>
-                  <div className="pho-menu-items">
-                    {group.items.map((item, i) => (
-                      <div key={i} className="pho-menu-item">
-                        <div className="pho-menu-item-header">
-                          <span className="pho-menu-item-name">{item.Name}</span>
-                          <span className="pho-menu-item-price">{item.Price}</span>
-                        </div>
-                        <p className="pho-menu-item-desc">{item.Desc}</p>
-                        {item.Tags?.length > 0 && (
-                          <div className="pho-menu-tags">
-                            {item.Tags.map(tag => <span key={tag} className="pho-tag">• {tag}</span>)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="pho-bento-right">
-                    <div className="stamp" style={{transform:"rotate(3deg)",position:"relative"}}>
-                      <img src={s.pho_img_url} alt="Signature Pho"/>
-                      <div className="pho-bestseller">Best<br/>Seller</div>
-                    </div>
-                    <div className="pho-quote-card">
-                      <div className="pho-quote-title">Our Secret Sauce</div>
-                      <p className="pho-quote-text">"{a.chef_quote}"</p>
-                      <div className="pho-quote-author">— {a.chef_name}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-
-            // Các group còn lại (Drinks, Desserts...): simple list layout
+            // Tất cả danh mục khác → stamp cards (giống Small Bites)
             return (
-              <div key={group.cat} style={{marginTop:64}}>
+              <div key={group.cat} style={{marginBottom:80}}>
                 <div className="pho-sec-head">
                   <div className="pho-sec-icon-wrap">
                     <span style={{fontSize:32}}>{group.icon}</span>
@@ -692,18 +679,19 @@ export default function LandingClient({
                   </div>
                   <div className="hand-div" style={{width:192,margin:"12px auto 0"}}/>
                 </div>
-                <div className="pho-menu-items" style={{maxWidth:800,margin:"0 auto"}}>
+                <div className="pho-bites-grid">
                   {group.items.map((item, i) => (
-                    <div key={i} className="pho-menu-item">
-                      <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
-                        {item.Img && <img src={item.Img} alt={item.Name} style={{width:64,height:64,objectFit:"cover",borderRadius:8,flexShrink:0}}/>}
-                        <div style={{flex:1}}>
-                          <div className="pho-menu-item-header">
-                            <span className="pho-menu-item-name">{item.Name}</span>
-                            <span className="pho-menu-item-price">{item.Price}</span>
-                          </div>
-                          <p className="pho-menu-item-desc">{item.Desc}</p>
+                    <div key={i} className="pho-bite-card">
+                      <div className="stamp">
+                        {item.Img
+                          ? <img className="pho-bite-img" src={item.Img} alt={item.Name}/>
+                          : <div className="pho-bite-img" style={{display:"flex",alignItems:"center",justifyContent:"center",background:"#f5f0e8",fontSize:48}}>{group.icon}</div>
+                        }
+                        <div className="pho-bite-header">
+                          <span className="pho-bite-name">{item.Name}</span>
+                          <span className="pho-bite-price">{item.Price}</span>
                         </div>
+                        <p className="pho-bite-desc">{item.Desc}</p>
                       </div>
                     </div>
                   ))}
