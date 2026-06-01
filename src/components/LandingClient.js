@@ -180,7 +180,7 @@ export default function LandingClient({
   const menuGroups = (() => {
     if (services.length === 0) return [
       {
-        cat: "Small Bites & Rolls", icon: "restaurant_menu",
+        cat: "Small Bites & Rolls", icon: "🥢",
         items: [
           { Name:"Imperial Spring Rolls", Price:"$12", Desc:"Crispy pork and shrimp rolls served with fresh herbs and nước chấm.", Img:"https://lh3.googleusercontent.com/aida-public/AB6AXuBctzmAIMozIEr2msh9nSQye3jz8rQ-yog-NT6TFVJJgjj3mluC9r8lzuBqr0HsQRuO6wjfhWIICDoblaGQx3D-F3msr0fz14WrZkdZqpCjvJewavYEIKm9beO76M2ZlnP1BzClvK06ZSTEidPKZxTzk787In-h93lJC9hGMLoil191nSurRwWWO-iXDpvWw9lBGBW17PHWfFTCfd4kfqa_rZQ77ZRS5uMfZvqxgXen4gUvtxvFAva6rDHM3mvTT6Cil9EN3WUnUpNs", Featured:false },
           { Name:"Fresh Summer Rolls", Price:"$10", Desc:"Rice paper rolls with shrimp, vermicelli, mint, and peanut dip.", Img:"https://lh3.googleusercontent.com/aida-public/AB6AXuCZndYR4injMDn2mdGNvJ_XeykDXgTpGqt8ttPzdh8Zt-2HG-BQztrasKpvwGw8UtZXkorErfoNNVXaSEhqv1L7yRZcYAxCNrlgAzJagyZp-TkPu4IpUt6f230WV6_f_jeaJ8xo7u-IagtAnpmbAA3pIZGVHIXFLvu1mnarzEj0mdycQiWtfSNGh5sXVU_zgpiK8dRCah2Nm1d-Hr7RSUigAKrmVOtJknrM_5B_lAAjL60qz_JLJsTDFRFpJQ4BDvzuWdork9cR2B67", Featured:true },
@@ -188,7 +188,7 @@ export default function LandingClient({
         ]
       },
       {
-        cat: settings.pho_title || "Signature Phở", icon: "soup_kitchen",
+        cat: settings.pho_title || "Signature Phở", icon: "🍜",
         sub: settings.pho_sub || "Our broth is simmered for 24 hours with charred ginger, onions, and secret family spices.",
         items: [
           { Name:"Classic Beef Phở",      Price:"$18.50", Desc:"Thinly sliced rare ribeye, brisket, and meatballs in our 24-hour beef marrow broth.", Tags:["Popular","Gluten Free"] },
@@ -198,23 +198,34 @@ export default function LandingClient({
         ]
       },
       {
-        cat: settings.beyond_title || "Beyond the Broth", icon: "outdoor_grill",
+        cat: settings.beyond_title || "Beyond the Broth", icon: "🔥",
         dark: true,
         sub: settings.beyond_sub || "Discover our selection of stir-fried specialties and dry noodles.",
         items: [
-          { Name:"Sizzling Lemongrass Pork",    Price:"$19.50", Desc:"Grilled marinated pork served over cool vermicelli, herbs, and crispy shallots.", Icon:"skillet" },
-          { Name:"Honey Glazed Chicken Noodle", Price:"$18.50", Desc:"Wok-charred chicken with honey-soy glaze, served with garlic egg noodles.", Icon:"outdoor_grill" },
+          { Name:"Sizzling Lemongrass Pork", Price:"$19.50", Desc:"Grilled marinated pork served over cool vermicelli, herbs, and crispy shallots.", Icon:"🔥" },
+          { Name:"Honey Glazed Chicken Noodle", Price:"$18.50", Desc:"Wok-charred chicken with honey-soy glaze, served with garlic egg noodles.", Icon:"🍯" },
         ]
       },
     ];
-    // Group services by Category
+    // Group services by Category - giữ đúng thứ tự category
+    const ORDER = ["Small Bites & Rolls", "Signature Phở", "Beyond the Broth", "Drinks", "Desserts"];
+    const ICONS = { "Small Bites & Rolls":"🥢", "Signature Phở":"🍜", "Beyond the Broth":"🔥", "Drinks":"🥤", "Desserts":"🍮" };
     const groups = {};
     services.forEach(svc => {
       const cat = svc.Category || "Menu";
-      if (!groups[cat]) groups[cat] = { cat, icon:"restaurant_menu", items:[] };
+      if (!groups[cat]) groups[cat] = {
+        cat,
+        icon: ICONS[cat] || "🍽️",
+        dark: cat === (settings.beyond_title || "Beyond the Broth"),
+        sub: cat === (settings.pho_title || "Signature Phở") ? (settings.pho_sub || "") : cat === (settings.beyond_title || "Beyond the Broth") ? (settings.beyond_sub || "") : "",
+        items: []
+      };
       groups[cat].items.push(svc);
     });
-    return Object.values(groups);
+    // Sort by predefined order
+    const sorted = ORDER.map(o => groups[o]).filter(Boolean);
+    const others = Object.values(groups).filter(g => !ORDER.includes(g.cat));
+    return [...sorted, ...others];
   })();
 
   const activeServices = services.length > 0 ? services : menuGroups.flatMap(g => g.items);
@@ -277,7 +288,7 @@ export default function LandingClient({
 
       <div suppressHydrationWarning style={{ fontFamily:"'Be Vietnam Pro',sans-serif", background:"#fdf9f0", color:"#1c1c17" }}>
         <style suppressHydrationWarning>{`
-          @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Be+Vietnam+Pro:wght@300;400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap');
 
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
           html{scroll-behavior:smooth;}
@@ -285,8 +296,6 @@ export default function LandingClient({
           button{cursor:pointer;border:none;font-family:inherit;}
           a{text-decoration:none;color:inherit;}
 
-          .ms{font-family:'Material Symbols Outlined';font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle;line-height:1;display:inline-block;}
-          .ms-fill{font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24;}
           ::-webkit-scrollbar{width:4px;}
           ::-webkit-scrollbar-track{background:#fdf9f0;}
           ::-webkit-scrollbar-thumb{background:#815500;}
@@ -546,7 +555,7 @@ export default function LandingClient({
             </div>
             <div>
               <div className="pho-story-eyebrow">
-                <span className="ms" style={{fontSize:16}}>menu_book</span>
+                📖
                 Our Story
               </div>
               <h2 className="pho-story-h2">From Our Kitchen<br/>to <em>Your Table</em></h2>
@@ -572,7 +581,7 @@ export default function LandingClient({
             <div key={group.cat}>
               <div className="pho-sec-head">
                 <div className="pho-sec-icon-wrap">
-                  <span className="ms pho-sec-icon">{group.icon}</span>
+                  <span style={{fontSize:32}}>{group.icon}</span>
                   <h2 className="pho-sec-h2">{group.cat}</h2>
                 </div>
                 <div className="hand-div" style={{width:192,margin:"12px auto 0"}}/>
@@ -598,7 +607,7 @@ export default function LandingClient({
           {menuGroups.filter(g => !g.dark).slice(1,2).map(group => (
             <div key={group.cat}>
               <div className="pho-sec-head">
-                <div style={{textAlign:"center",fontSize:64,color:"rgba(6,27,14,0.1)",fontFamily:"'Material Symbols Outlined'",marginBottom:8}}>soup_kitchen</div>
+                <div style={{textAlign:"center",fontSize:64,marginBottom:8,opacity:0.15}}>🍜</div>
                 <h2 className="pho-sec-h2 pho-sec-h2-dark" style={{textAlign:"center",fontFamily:"'Bricolage Grotesque',sans-serif",fontSize:"clamp(28px,4vw,56px)"}}>{group.cat}</h2>
                 {group.sub && <p className="pho-sec-sub">{group.sub}</p>}
                 <div className="hand-div" style={{width:256,margin:"16px auto 0"}}/>
@@ -610,7 +619,7 @@ export default function LandingClient({
                     <img src={a.circle_img_1} alt="Fresh herbs"/>
                   </div>
                   <div>
-                    <div style={{textAlign:"center",fontSize:40,color:"var(--secondary)",fontFamily:"'Material Symbols Outlined'"}}>cooking</div>
+                    <div style={{textAlign:"center",fontSize:36}}>🍲</div>
                     <div className="pho-trad-label">Traditional<br/>Methods</div>
                   </div>
                 </div>
@@ -659,7 +668,7 @@ export default function LandingClient({
                   {group.items.map((item, i) => (
                     <div key={i} className="pho-beyond-item">
                       <div className="pho-beyond-icon">
-                        <span className="ms">{item.Icon || "restaurant"}</span>
+                        {item.Icon || "🍽️"}
                       </div>
                       <div>
                         <div className="pho-beyond-item-name">{item.Name}</div>
@@ -684,7 +693,7 @@ export default function LandingClient({
             <div className="pho-reviews-inner">
               <div className="pho-sec-head">
                 <div className="pho-sec-icon-wrap">
-                  <span className="ms pho-sec-icon">format_quote</span>
+                  <span style={{fontSize:32}}>💬</span>
                   <h2 className="pho-sec-h2">What Our Guests Say</h2>
                 </div>
                 <div className="hand-div" style={{width:192,margin:"12px auto 0"}}/>
@@ -726,15 +735,15 @@ export default function LandingClient({
           <div className="pho-order-inner">
             <div className="pho-order-left">
               <div className="pho-order-eyebrow">
-                <span className="ms" style={{fontSize:16}}>restaurant</span>
+                🍜
                 Reserve Your Table
               </div>
               <h2 className="pho-order-h2">Come Dine<br/>With <em>Us</em></h2>
               <p className="pho-order-desc">Book your table for a warm, authentic Vietnamese dining experience. We'll confirm within 2 hours during business hours.</p>
               <div className="pho-order-info">
-                {[["schedule",`${s.hours_weekday} · ${s.hours_weekend}`],["location_on",s.address],["call",s.phone],["check_circle","Walk-ins welcome · Reservations preferred"]].map(([icon,val])=>val&&(
+                {[["🕐",`${s.hours_weekday} · ${s.hours_weekend}`],["📍",s.address],["📞",s.phone],["✓","Walk-ins welcome · Reservations preferred"]].map(([icon,val])=>val&&(
                   <div key={icon} className="pho-order-info-item">
-                    <div className="pho-order-info-icon"><span className="ms" style={{fontSize:18}}>{icon}</span></div>
+                    <div className="pho-order-info-icon">{icon}</div>
                     <span>{val}</span>
                   </div>
                 ))}
@@ -830,14 +839,14 @@ export default function LandingClient({
             </div>
             <div className="pho-footer-socials">
               {[
-                [s.google_business_url,"public","Website"],
-                [s.instagram_url,"photo_camera","Instagram"],
-                [s.facebook_url,"thumb_up","Facebook"],
-                [s.tiktok_url,"play_circle","TikTok"],
-                [s.yelp_url,"star","Yelp"],
+                [s.google_business_url,"🌐","Website"],
+                [s.instagram_url,"📸","Instagram"],
+                [s.facebook_url,"👍","Facebook"],
+                [s.tiktok_url,"▶","TikTok"],
+                [s.yelp_url,"⭐","Yelp"],
               ].filter(([url])=>url).map(([url,icon,title])=>(
                 <a key={title} href={url} target="_blank" rel="noopener noreferrer" className="pho-footer-social" title={title}>
-                  <span className="ms" style={{fontSize:20}}>{icon}</span>
+                  <span style={{fontSize:20}}>{icon}</span>
                 </a>
               ))}
             </div>
