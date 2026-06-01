@@ -8,14 +8,16 @@ import {
   InfoCircleOutlined, SearchOutlined, SettingOutlined,
   LogoutOutlined, UserOutlined, AppstoreOutlined,
   MenuFoldOutlined, MenuUnfoldOutlined, FileTextOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 
 const { Sider, Content, Header } = Layout;
 const { Text } = Typography;
 
 const NAV = [
-  { key: "/admin",               icon: <CalendarOutlined/>,    label: "Reservations" },
-  { key: "/admin/menu",          icon: <AppstoreOutlined/>,    label: "Menu" },
+  { key: "/admin",               icon: <CalendarOutlined/>,       label: "Reservations" },
+  { key: "/admin/categories",     icon: <UnorderedListOutlined/>,  label: "Categories" },
+  { key: "/admin/menu",           icon: <AppstoreOutlined/>,       label: "Menu Items" },
   { key: "/admin/gallery",       icon: <FileImageOutlined/>,   label: "Gallery" },
   { key: "/admin/reviews",       icon: <StarOutlined/>,        label: "Reviews" },
   { key: "/admin/content",       icon: <FileTextOutlined/>,    label: "Page Content" },
