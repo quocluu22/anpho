@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import Script from "next/script";
 
 const TIMES = [
@@ -278,9 +279,13 @@ export default function LandingClient({
     finally { setLoading(false); }
   };
 
+  // page: navigate sang trang mới | scroll: scroll trong trang
   const NAV_LINKS = [
-    ["story","Our Story"],["menu","Menu"],["gallery","Gallery"],
-    ["order","Order Now"],["locations","Locations"],
+    { label:"Our Story", type:"page",   href:"/about"   },
+    { label:"Menu",      type:"page",   href:"/menu"    },
+    { label:"Gallery",   type:"page",   href:"/gallery" },
+    { label:"Order Now", type:"scroll", id:"order"      },
+    { label:"Locations", type:"scroll", id:"locations"  },
   ];
 
   return (
@@ -519,8 +524,10 @@ export default function LandingClient({
             <button className="pho-logo pho-mobile-a" onClick={() => { window.scrollTo({top:0,behavior:"smooth"}); setMenuOpen(false); }}>
               {s.salon_name}
             </button>
-            {NAV_LINKS.map(([id, label]) => (
-              <button key={id} className="pho-mobile-a" onClick={() => scrollTo(id)}>{label}</button>
+            {NAV_LINKS.map((item) => (
+              item.type === "page"
+                ? <Link key={item.label} href={item.href} className="pho-mobile-a" onClick={() => setMenuOpen(false)}>{item.label}</Link>
+                : <button key={item.label} className="pho-mobile-a" onClick={() => { scrollTo(item.id); setMenuOpen(false); }}>{item.label}</button>
             ))}
           </div>
         )}
@@ -532,8 +539,10 @@ export default function LandingClient({
               {s.logo_url ? <img src={s.logo_url} alt={s.salon_name} style={{height:36}}/> : s.salon_name}
             </button>
             <div className="pho-nav-links">
-              {NAV_LINKS.map(([id, label]) => (
-                <button key={id} className="pho-nav-a" onClick={() => scrollTo(id)}>{label}</button>
+              {NAV_LINKS.map((item) => (
+                item.type === "page"
+                  ? <Link key={item.label} href={item.href} className="pho-nav-a">{item.label}</Link>
+                  : <button key={item.label} className="pho-nav-a" onClick={() => scrollTo(item.id)}>{item.label}</button>
               ))}
             </div>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
